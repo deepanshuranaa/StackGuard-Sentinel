@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { FieldErrors, UseFormRegister, UseFormWatch } from 'react-hook-form';
+import { Eye, EyeOff } from 'lucide-react';
 import { LoginFormSchema } from '../../types/validation';
+import { togglePasswordVisibility } from '../../lib/login-util';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -29,13 +31,18 @@ export function RightPanel({
 }: RightPanelProps) {
   const email = watch('email');
   const password = watch('password');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handlePasswordToggle = () => {
+    setShowPassword(!showPassword);
+  };
 
   return (
     <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center px-6 md:px-12 py-12 md:py-0">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl md:text-2xl font-bold text-neutral-900 mb-2">
+          <h2 className="text-3xl md:text-2xl font-thin text-muted-foreground mb-2">
             Let&apos;s login you first to your StackGuard account
           </h2>
           <p className="text-neutral-500 text-sm">
@@ -68,27 +75,27 @@ export function RightPanel({
             <div className="relative">
               <Input
                 {...register('password')}
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••••••••••"
                 disabled={isSubmitting}
-                className={`bg-blue-50 border-neutral-200 focus:bg-white transition-colors ${
+                className={`bg-blue-50 border-neutral-200 focus:bg-white transition-colors pr-10 ${
                   errors.password ? 'border-red-500' : ''
                 }`}
               />
-              {password && !errors.password && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <svg
-                    className="w-5 h-5 text-green-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
+              {password && (
+                <button
+                  type="button"
+                  onClick={handlePasswordToggle}
+                  disabled={isSubmitting}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 disabled:opacity-50 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               )}
             </div>
             {errors.password && (
@@ -111,7 +118,7 @@ export function RightPanel({
           <Button
             type="submit"
             disabled={isSubmitting || isLoading}
-            className="w-full bg-purple-700 hover:bg-purple-800 text-white h-10 font-semibold rounded-md transition-colors"
+            className="bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-md transition-colors"
           >
             {isSubmitting || isLoading ? (
               <span className="flex items-center gap-2">
@@ -125,8 +132,8 @@ export function RightPanel({
         </form>
 
         {/* Sign Up Link */}
-        <div className="mt-6 text-center text-sm text-neutral-600">
-          Don&apos;t have an account?{' '}
+        <div className="mt-6 text-start text-sm">
+          <span className="text-neutral-500">Don&apos;t have an account?</span>{' '}
           <button
             disabled={isSubmitting}
             className="text-purple-600 hover:text-purple-700 font-semibold disabled:opacity-50"
