@@ -1,13 +1,31 @@
 'use client';
 
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import type { User, AuthContextType } from '@/lib/types/auth';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const CREDENTIALS_KEY = 'sg_credentials';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore credentials from session storage on mount
+  useEffect(() => {
+    try {
+      const storedCredentials = sessionStorage.getItem(CREDENTIALS_KEY);
+      if (storedCredentials) {
+        const credentials = JSON.parse(storedCredentials);
+        setUser(credentials);
+      }
+    } catch (error) {
+      console.error('Failed to restore credentials from session storage:', error);
+      sessionStorage.removeItem(CREDENTIALS_KEY);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -16,11 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
       if (email && password) {
-        setUser({
+        const newUser = {
           id: '1',
           email,
           name: email.split('@')[0],
-        });
+        };
+        setUser(newUser);
+        // Store credentials in session storage
+        sessionStorage.setItem(CREDENTIALS_KEY, JSON.stringify(newUser));
       }
     } finally {
       setIsLoading(false);
@@ -29,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
+    // Clear credentials from session storage
+    sessionStorage.removeItem(CREDENTIALS_KEY);
   }, []);
 
   const value: AuthContextType = {

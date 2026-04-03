@@ -1,8 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { SidebarWrapper } from '@/components/sidebar-wrapper';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
 export default function ProtectedLayout({
   children,
@@ -11,49 +21,46 @@ export default function ProtectedLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
 
   useEffect(() => {
+    // Check credentials in the background after initial render
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      setShowSessionExpired(true);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-neutral-300 border-t-blue-600 rounded-full animate-spin" />
-          <p className="mt-4 text-neutral-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleRedirectToLogin = () => {
+    router.push('/login');
+  };
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Render content with overlay dialog if session expired
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="flex h-screen">
-        {/* Sidebar placeholder */}
-        <aside className="w-64 bg-white border-r border-neutral-200">
-          <nav className="p-4">
-            <div className="text-sm font-semibold text-neutral-700">Menu</div>
-          </nav>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-auto">
-          {/* Header placeholder */}
-          <header className="bg-white border-b border-neutral-200 px-8 py-4">
-            <div className="text-sm text-neutral-600">Header</div>
-          </header>
-
-          {/* Page content */}
-          <div className="p-8">{children}</div>
-        </main>
-      </div>
-    </div>
+    <>
+      <SidebarWrapper>{children}</SidebarWrapper>
+      {showSessionExpired && (
+        <Dialog open={true} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Session Expired</DialogTitle>
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 mt-4">
+                <LogOut className="w-6 h-6 text-red-600" />
+              </div>
+              <DialogDescription>
+                <b>Your session has ended for security purposes.</b> Please log in again to continue using StackGuard Sentinel and keep your identity intelligence protected.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 justify-center pt-4">
+              <Button
+                onClick={handleRedirectToLogin}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+              >
+                Redirect to Login
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
