@@ -7,22 +7,18 @@ import { RiskTrendCard } from '../helpers/risk-trend-card';
 
 export function DashboardOverviewView() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[auto_auto]">
-      {/* Row 1, Col 1 */}
-      <OverallRiskCard />
-
-      {/* Row 1, Col 2 */}
-      <SecretsSeverityCard />
-
-      {/* Row 1+2, Col 3 — spans 2 rows on desktop */}
-      <div className="lg:row-span-2">
-        <QuickSummaryCard />
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_minmax(280px,1fr)]">
+      {/* Left 2 columns — independent flow */}
+      <div className="col-span-1 grid grid-cols-1 gap-4 self-start md:grid-cols-2 lg:col-span-2">
+        <OverallRiskCard />
+        <SecretsSeverityCard />
+        <div className="md:col-span-2">
+          <RiskTrendCard />
+        </div>
       </div>
 
-      {/* Row 2, Col 1+2 — spans 2 columns on desktop */}
-      <div className="md:col-span-2">
-        <RiskTrendCard />
-      </div>
+      {/* Right column — Quick Summary */}
+      <QuickSummaryCard />
     </div>
   );
 }

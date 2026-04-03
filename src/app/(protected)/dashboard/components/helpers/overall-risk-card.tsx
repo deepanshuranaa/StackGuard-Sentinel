@@ -42,7 +42,7 @@ function getRiskLabel(score: number) {
 
 export function OverallRiskCard() {
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Overall risk score</CardTitle>
         <CardAction>
@@ -56,7 +56,7 @@ export function OverallRiskCard() {
           </Tooltip>
         </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-1 items-end pb-2">
+      <CardContent className="flex items-end pb-2">
         <ChartContainer
           config={chartConfig}
           className="mx-auto w-full max-h-[160px] aspect-[2/1]"
