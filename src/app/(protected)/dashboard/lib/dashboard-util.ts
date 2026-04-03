@@ -26,3 +26,60 @@ export function setSyncTimestamp(ts: number): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SYNC_STORAGE_KEY, String(ts));
 }
+
+export interface RiskTrendDataPoint {
+  date: string;
+  risk: number;
+}
+
+export function getChartDataByPeriod(period: string): RiskTrendDataPoint[] {
+  const generateData = (days: number): RiskTrendDataPoint[] => {
+    const data: RiskTrendDataPoint[] = [];
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const dateStr = `${month}/${day}`;
+      // Generate realistic risk score data with some variation
+      const baseRisk = 20 + Math.sin(i * 0.5) * 25 + Math.random() * 15;
+      data.push({
+        date: dateStr,
+        risk: Math.min(100, Math.max(0, Math.round(baseRisk))),
+      });
+    }
+    return data;
+  };
+
+  const generateMonthData = (months: number): RiskTrendDataPoint[] => {
+    const data: RiskTrendDataPoint[] = [];
+    const now = new Date();
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const dateStr = `${month}/${day}`;
+      const baseRisk = 25 + Math.sin(i * 0.3) * 28 + Math.random() * 12;
+      data.push({
+        date: dateStr,
+        risk: Math.min(100, Math.max(0, Math.round(baseRisk))),
+      });
+    }
+    return data;
+  };
+
+  switch (period) {
+    case '5':
+      return generateData(5);
+    case '30':
+      return generateData(30);
+    case '180':
+      return generateMonthData(26); // ~6 months of weekly data
+    case '365':
+      return generateMonthData(52); // ~12 months of weekly data
+    default:
+      return generateData(30);
+  }
+}
