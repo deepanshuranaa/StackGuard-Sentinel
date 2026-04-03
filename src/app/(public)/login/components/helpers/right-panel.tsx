@@ -13,7 +13,6 @@ interface RightPanelProps {
   register: UseFormRegister<LoginFormSchema>;
   watch: UseFormWatch<LoginFormSchema>;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
-  generalError?: string;
 }
 
 /**
@@ -27,7 +26,6 @@ export function RightPanel({
   register,
   watch,
   onSubmit,
-  generalError,
 }: RightPanelProps) {
   const email = watch('email');
   const password = watch('password');
@@ -44,13 +42,6 @@ export function RightPanel({
             Enter your credentials to get started
           </p>
         </div>
-
-        {/* General Error */}
-        {generalError && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-700">{generalError}</p>
-          </div>
-        )}
 
         {/* Form */}
         <form onSubmit={onSubmit} className="space-y-5">

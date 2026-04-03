@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { loginFormSchema, type LoginFormSchema } from '../../types/validation';
 import { mockLoginService } from '../../services/login-service';
@@ -16,7 +17,6 @@ import { LoginView } from '../views/login-view';
 export function LoginContainer() {
   const router = useRouter();
   const { login } = useAuth();
-  const [generalError, setGeneralError] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
 
   // React Hook Form setup with Zod validation
@@ -38,7 +38,6 @@ export function LoginContainer() {
    * 4. Redirect to dashboard
    */
   const onSubmit = async (data: LoginFormSchema) => {
-    setGeneralError(undefined);
     setIsLoading(true);
 
     try {
@@ -46,20 +45,31 @@ export function LoginContainer() {
       const response = await mockLoginService(data);
 
       if (!response.success) {
-        // Show general error (invalid credentials)
-        setGeneralError(response.message || 'Login failed. Please try again.');
+        // Show error toast
+        toast.error('Invalid Credentials', {
+          description: response.message || 'Login failed. Please try again.',
+        });
+        setIsLoading(false);
         return;
       }
 
       // Update global auth state
       await login(data.email, data.password);
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Show success toast
+      toast.success('Welcome!', {
+        description: 'You have successfully signed in.',
+      });
+
+      // Small delay to show toast before redirect
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 800);
     } catch (error) {
-      setGeneralError('An unexpected error occurred. Please try again.');
+      toast.error('Error', {
+        description: 'An unexpected error occurred. Please try again.',
+      });
       console.error('Login error:', error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -73,7 +83,6 @@ export function LoginContainer() {
       watch={watch}
       handleSubmit={handleSubmit}
       onSubmit={onSubmit}
-      generalError={generalError}
     />
   );
 }

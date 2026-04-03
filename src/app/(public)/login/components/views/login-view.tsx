@@ -14,7 +14,6 @@ interface LoginViewProps {
   watch: UseFormWatch<LoginFormSchema>;
   handleSubmit: UseFormHandleSubmit<LoginFormSchema>;
   onSubmit: (data: LoginFormSchema) => Promise<void>;
-  generalError?: string;
 }
 
 /**
@@ -29,7 +28,6 @@ export function LoginView({
   watch,
   handleSubmit,
   onSubmit,
-  generalError,
 }: LoginViewProps) {
   return (
     <div className="flex w-full min-h-screen bg-white md:bg-neutral-50">
@@ -44,7 +42,6 @@ export function LoginView({
         register={register}
         watch={watch}
         onSubmit={handleSubmit(onSubmit)}
-        generalError={generalError}
       />
     </div>
   );
