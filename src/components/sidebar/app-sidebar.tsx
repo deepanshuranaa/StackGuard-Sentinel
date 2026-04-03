@@ -27,9 +27,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <a href="/dashboard" className="flex items-center gap-2">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-purple-600 text-white font-bold">
-                  <span>SG</span>
-                </div>
+                <img src="/sidebarlogo.svg" alt="StackGuard" className="size-8" />
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">StackGuard</span>
                   <span className="text-xs text-muted-foreground">Sentinel</span>
