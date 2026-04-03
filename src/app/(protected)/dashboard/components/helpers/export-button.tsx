@@ -9,7 +9,7 @@ type ExportButtonProps = {
 
 export function ExportButton({ onExport }: ExportButtonProps) {
   return (
-    <Button variant="outline" onClick={onExport} className="shrink-0 gap-2">
+    <Button variant="outline" onClick={onExport} className="shrink-0 gap-2 cursor-pointer">
       <Download className="size-4" />
       <span className="hidden sm:inline">Export data</span>
     </Button>

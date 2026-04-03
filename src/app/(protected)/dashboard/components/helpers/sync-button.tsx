@@ -22,7 +22,7 @@ export function SyncButton({ isSyncing, onSync }: SyncButtonProps) {
           size="icon"
           onClick={onSync}
           disabled={isSyncing}
-          className="shrink-0"
+          className="shrink-0 cursor-pointer"
         >
           <RefreshCw
             className={`size-4 ${isSyncing ? 'animate-spin' : ''}`}

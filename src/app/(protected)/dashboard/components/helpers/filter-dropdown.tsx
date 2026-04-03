@@ -36,7 +36,7 @@ export function FilterDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="shrink-0 gap-2">
+        <Button variant="outline" className="shrink-0 gap-2 cursor-pointer">
           <SlidersHorizontal className="size-4" />
           <span className="hidden sm:inline">Filter</span>
           {totalActive > 0 && (
