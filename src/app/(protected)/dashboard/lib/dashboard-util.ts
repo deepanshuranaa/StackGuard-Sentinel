@@ -83,3 +83,84 @@ export function getChartDataByPeriod(period: string): RiskTrendDataPoint[] {
       return generateData(30);
   }
 }
+
+import type { InsightsTabData, InsightsTab, SourceMetric, SourceBreakdown } from '../types/insights';
+
+const sourceNames: Record<InsightsTab, string[]> = {
+  'vcs': ['Slack', 'Github', 'Gitlab', 'Bitbucket', 'Azure DevOps'],
+  'storage': ['S3', 'GCS', 'Azure Blob', 'Dropbox', 'Box'],
+  'cloud-infra': ['AWS', 'GCP', 'Azure', 'Databricks', 'Supabase'],
+  'directory-services': ['Okta', 'Azure AD', 'Onelogin', 'Ping', 'Auth0'],
+};
+
+const breakdownSources: Record<InsightsTab, Record<string, string[]>> = {
+  'vcs': {
+    'Slack': ['GitHub', 'GitLab'],
+    'Github': ['Actions', 'Codespaces'],
+    'Gitlab': ['CI/CD', 'Pages'],
+    'Bitbucket': ['Pipelines', 'Cloud'],
+    'Azure DevOps': ['Repos', 'Pipelines'],
+  },
+  'storage': {
+    'S3': ['Buckets', 'CloudFront'],
+    'GCS': ['Buckets', 'Cloud CDN'],
+    'Azure Blob': ['Containers', 'CDN'],
+    'Dropbox': ['Sync', 'API'],
+    'Box': ['Folders', 'Integration'],
+  },
+  'cloud-infra': {
+    'AWS': ['EC2', 'Lambda', 'RDS'],
+    'GCP': ['Compute', 'Cloud Functions'],
+    'Azure': ['VMs', 'Functions'],
+    'Databricks': ['Clusters', 'Jobs'],
+    'Supabase': ['Postgres', 'Auth'],
+  },
+  'directory-services': {
+    'Okta': ['SSO', 'MFA'],
+    'Azure AD': ['Groups', 'Roles'],
+    'Onelogin': ['Apps', 'Policies'],
+    'Ping': ['Agents', 'Connectors'],
+    'Auth0': ['Connections', 'Rules'],
+  },
+};
+
+export function getInsightsDataByTab(tab: InsightsTab): InsightsTabData {
+  const sources = sourceNames[tab];
+  const selectedSource = sources[0]; // Default to first source
+
+  // Generate top 10 sources with varying critical/risky counts
+  const metrics: SourceMetric[] = sources.slice(0, 10).map((source, idx) => {
+    const baseTotal = Math.floor(Math.random() * 8) + 2;
+    const critical = Math.floor(baseTotal * (0.6 + Math.random() * 0.3));
+    const risky = Math.max(0, baseTotal - critical - Math.floor(Math.random() * 2));
+    return {
+      name: source,
+      critical,
+      risky,
+      total: baseTotal,
+    };
+  });
+
+  // Generate source breakdown for selected source
+  const breakdownNames = breakdownSources[tab][selectedSource] || ['Sub1', 'Sub2'];
+  const breakdown: SourceBreakdown[] = breakdownNames.map((name) => ({
+    name,
+    count: Math.floor(Math.random() * 5) + 1,
+  }));
+
+  const selectedMetric = metrics[0];
+  const selectedSourceDetails = {
+    selectedValue: selectedMetric.total,
+    total: selectedMetric.total,
+    critical: selectedMetric.critical,
+    risky: selectedMetric.risky,
+    breakdown,
+  };
+
+  return {
+    tab,
+    selectedSource,
+    metrics,
+    selectedSourceDetails,
+  };
+}
