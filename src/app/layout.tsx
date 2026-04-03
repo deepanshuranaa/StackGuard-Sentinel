@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/context/auth-context';
 import { ToasterProvider } from '@/components/providers/toaster-provider';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import './globals.css';
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -21,8 +22,10 @@ export default function RootLayout({
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
         <AuthProvider>
-          <ToasterProvider />
-          {children}
+          <TooltipProvider>
+            <ToasterProvider />
+            {children}
+          </TooltipProvider>
         </AuthProvider>
       </body>
     </html>

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { SidebarWrapper } from '@/components/sidebar-wrapper';
 
 export default function ProtectedLayout({
   children,
@@ -33,27 +34,5 @@ export default function ProtectedLayout({
     return null;
   }
 
-  return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="flex h-screen">
-        {/* Sidebar placeholder */}
-        <aside className="w-64 bg-white border-r border-neutral-200">
-          <nav className="p-4">
-            <div className="text-sm font-semibold text-neutral-700">Menu</div>
-          </nav>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-auto">
-          {/* Header placeholder */}
-          <header className="bg-white border-b border-neutral-200 px-8 py-4">
-            <div className="text-sm text-neutral-600">Header</div>
-          </header>
-
-          {/* Page content */}
-          <div className="p-8">{children}</div>
-        </main>
-      </div>
-    </div>
-  );
+  return <SidebarWrapper>{children}</SidebarWrapper>;
 }
