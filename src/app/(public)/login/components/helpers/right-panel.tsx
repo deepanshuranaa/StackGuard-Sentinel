@@ -42,10 +42,10 @@ export function RightPanel({
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl md:text-2xl font-thin text-muted-foreground mb-2">
+          <h2 className="text-3xl md:text-2xl font-light  mb-2">
             Let&apos;s login you first to your StackGuard account
           </h2>
-          <p className="text-neutral-500 text-sm">
+          <p className="text-neutral-500 text-muted-foreground font-extralight text-sm">
             Enter your credentials to get started
           </p>
         </div>
