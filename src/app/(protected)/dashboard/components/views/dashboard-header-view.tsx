@@ -10,6 +10,7 @@ type DashboardHeaderViewProps = {
   isSyncing: boolean;
   onSync: () => void;
   onExport: () => void;
+  isExporting: boolean;
   filterGroups: FilterGroup[];
   activeFilters: ActiveFilters;
   onFilterChange: (category: string, optionId: string) => void;
@@ -21,6 +22,7 @@ export function DashboardHeaderView({
   isSyncing,
   onSync,
   onExport,
+  isExporting,
   filterGroups,
   activeFilters,
   onFilterChange,
@@ -39,7 +41,7 @@ export function DashboardHeaderView({
       {/* Right section – Action buttons */}
       <div className="flex items-center gap-2">
         <SyncButton isSyncing={isSyncing} onSync={onSync} />
-        <ExportButton onExport={onExport} />
+        <ExportButton onExport={onExport} isExporting={isExporting} />
         <FilterDropdown
           filterGroups={filterGroups}
           activeFilters={activeFilters}

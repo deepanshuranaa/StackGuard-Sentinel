@@ -11,6 +11,11 @@ import {
 } from '../../lib/dashboard-util';
 import { DashboardHeaderView } from '../views/dashboard-header-view';
 
+type DashboardHeaderContainerProps = {
+  onExport: () => void;
+  isExporting: boolean;
+};
+
 function getDefaultFilters(): ActiveFilters {
   const filters = {} as ActiveFilters;
   for (const group of filterConfig) {
@@ -19,7 +24,7 @@ function getDefaultFilters(): ActiveFilters {
   return filters;
 }
 
-export function DashboardHeaderContainer() {
+export function DashboardHeaderContainer({ onExport, isExporting }: DashboardHeaderContainerProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [lastScanLabel, setLastScanLabel] = useState('Last scan completed 15 mins ago');
@@ -58,12 +63,6 @@ export function DashboardHeaderContainer() {
     }, 4000);
   }, []);
 
-  const handleExport = useCallback(() => {
-    toast.success('Export started', {
-      description: 'Your security data export is being prepared.',
-    });
-  }, []);
-
   const handleFilterChange = useCallback(
     (category: string, optionId: string) => {
       setActiveFilters((prev) => {
@@ -91,7 +90,8 @@ export function DashboardHeaderContainer() {
       lastScanLabel={lastScanLabel}
       isSyncing={isSyncing}
       onSync={handleSync}
-      onExport={handleExport}
+      onExport={onExport}
+      isExporting={isExporting}
       filterGroups={filterConfig}
       activeFilters={activeFilters}
       onFilterChange={handleFilterChange}
