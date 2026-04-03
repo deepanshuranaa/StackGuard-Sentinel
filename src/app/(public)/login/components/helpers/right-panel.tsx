@@ -87,7 +87,7 @@ export function RightPanel({
                   type="button"
                   onClick={handlePasswordToggle}
                   disabled={isSubmitting}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 disabled:opacity-50 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 disabled:opacity-50 transition-colors cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
@@ -108,7 +108,8 @@ export function RightPanel({
             <button
               type="button"
               disabled={isSubmitting}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50 cursor-not-allowed transition-colors"
+              aria-label='Password Reset Functionalirity Coming Soon'
             >
               Forgot Password?
             </button>
@@ -118,7 +119,7 @@ export function RightPanel({
           <Button
             type="submit"
             disabled={isSubmitting || isLoading}
-            className="bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-md transition-colors"
+            className="bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-50 w-full"
           >
             {isSubmitting || isLoading ? (
               <span className="flex items-center gap-2">
@@ -136,7 +137,7 @@ export function RightPanel({
           <span className="text-neutral-500">Don&apos;t have an account?</span>{' '}
           <button
             disabled={isSubmitting}
-            className="text-purple-600 hover:text-purple-700 font-semibold disabled:opacity-50"
+            className="text-purple-600 hover:text-purple-700 font-semibold disabled:opacity-50 cursor-pointer"
           >
             Sign up
           </button>
