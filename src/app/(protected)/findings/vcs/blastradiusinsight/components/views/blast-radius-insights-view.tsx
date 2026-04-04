@@ -14,17 +14,17 @@ interface BlastRadiusInsightsViewProps {
 
 export function BlastRadiusInsightsView({ data }: BlastRadiusInsightsViewProps) {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6">
       {/* Header with breadcrumb & back */}
       <div className="flex items-center gap-3">
-        <Link
+        {/* <Link
           href="/findings/vcs"
           className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Findings
-        </Link>
-        <div className="h-5 w-px bg-border" />
+        </Link> */}
+        {/* <div className="h-5 w-px bg-border" /> */}
         <nav className="flex items-center gap-1 text-sm text-muted-foreground">
           <span>Findings</span>
           <span>/</span>
