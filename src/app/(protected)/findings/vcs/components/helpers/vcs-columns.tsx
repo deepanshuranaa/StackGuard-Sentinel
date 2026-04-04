@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { VcsSecretFinding } from '../../types/findings';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -94,10 +95,12 @@ export const vcsColumns: ColumnDef<VcsSecretFinding>[] = [
     header: () => <span className="block text-center">Blast Radius</span>,
     cell: () => (
       <div className="flex justify-center">
-        <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">
-          Insights
-          <ArrowUpRight className="h-3.5 w-3.5 rotate-0" />
-        </span>
+        <Link href="/findings/vcs/blastradiusinsight">
+          <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">
+            Insights
+            <ArrowUpRight className="h-3.5 w-3.5 rotate-0" />
+          </span>
+        </Link>
       </div>
     ),
     size: 110,
