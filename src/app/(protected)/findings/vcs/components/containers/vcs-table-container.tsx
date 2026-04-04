@@ -71,11 +71,27 @@ export function VcsTableContainer({
     setSearchQuery(value);
   }, []);
 
-  const handleDownload = useCallback(() => {
-    toast.success('Download started', {
-      description: 'Findings CSV will be downloaded shortly.',
+  const handleDownload = useCallback(async () => {
+    const toastId = toast.loading('Generating PDF...', {
+      description: 'Exporting all findings with analysis.',
     });
-  }, []);
+
+    try {
+      const { exportVcsFindings } = await import('../../services/vcs-export-service');
+      await exportVcsFindings(findings);
+
+      toast.dismiss(toastId);
+      toast.success('PDF Downloaded', {
+        description: 'VCS findings report has been successfully exported.',
+      });
+    } catch (error) {
+      toast.dismiss(toastId);
+      toast.error('Export Failed', {
+        description: 'Could not generate PDF. Please try again.',
+      });
+      console.error('Export error:', error);
+    }
+  }, [findings]);
 
   return (
     <VcsTableView
