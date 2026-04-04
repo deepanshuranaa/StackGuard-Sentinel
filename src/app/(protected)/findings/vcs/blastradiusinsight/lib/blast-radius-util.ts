@@ -2,7 +2,8 @@ import type { Node, Edge } from '@xyflow/react';
 import type {
   BlastRadiusServiceData,
   BlastRadiusOutput,
-  BlastRadiusSummary,
+  IdentityBlastRadius,
+  IdentitySummary,
   AttackPath,
   RiskSeverity,
   AccessLevel,
@@ -46,41 +47,26 @@ function edgeColor(access: AccessLevel): string {
   }
 }
 
-function serviceRisk(service: BlastRadiusServiceData): RiskSeverity {
-  const scopes = service.scopes ?? [];
-  const writeCount = scopes.filter((s) => s.access !== 'Read').length;
-  const ratio = scopes.length > 0 ? writeCount / scopes.length : 0;
-
-  if (service.is_admin || service.key_type === 'Full Access Key') return 'Critical';
-  if (ratio > 0.7) return 'High';
-  if (ratio > 0.4) return 'Medium';
-  return 'Low';
-}
-
-// ─── Risk scoring ────────────────────────────────────────────────
-export function calculateRiskScore(services: BlastRadiusServiceData[]): {
+// ─── Risk scoring for a SINGLE identity ──────────────────────────
+function calculateIdentityRisk(svc: BlastRadiusServiceData): {
   score: number;
   severity: RiskSeverity;
 } {
   let score = 0;
+  const scopes = svc.scopes ?? [];
 
-  for (const svc of services) {
-    const scopes = svc.scopes ?? [];
+  score += scopes.length * 0.5;
 
-    score += scopes.length * 0.5;
-
-    for (const scope of scopes) {
-      score += accessWeight(scope.access);
-      if (isSensitiveScope(scope.permissions)) score += 3;
-    }
-
-    if (svc.is_admin) score += 20;
-    if (svc.key_type === 'Full Access Key') score += 15;
-    if (!svc['2fa_required']) score += 5;
-    if (!svc.is_restricted) score += 5;
+  for (const scope of scopes) {
+    score += accessWeight(scope.access);
+    if (isSensitiveScope(scope.permissions)) score += 3;
   }
 
-  // Normalize to 0-100
+  if (svc.is_admin) score += 20;
+  if (svc.key_type === 'Full Access Key') score += 15;
+  if (!svc['2fa_required']) score += 5;
+  if (!svc.is_restricted) score += 5;
+
   const normalized = Math.min(100, Math.round(score));
 
   let severity: RiskSeverity;
@@ -92,250 +78,219 @@ export function calculateRiskScore(services: BlastRadiusServiceData[]): {
   return { score: normalized, severity };
 }
 
-// ─── Summary builder ─────────────────────────────────────────────
-export function buildSummary(services: BlastRadiusServiceData[]): BlastRadiusSummary {
-  let totalScopes = 0;
+// ─── Summary for a SINGLE identity ──────────────────────────────
+function buildIdentitySummary(svc: BlastRadiusServiceData): IdentitySummary {
+  const scopes = svc.scopes ?? [];
   let writeAccessCount = 0;
   let readWriteAccessCount = 0;
   let readOnlyCount = 0;
   let criticalScopes = 0;
-  let has2FA = false;
-  let hasAdmin = false;
 
-  for (const svc of services) {
-    const scopes = svc.scopes ?? [];
-    totalScopes += scopes.length;
-
-    if (svc['2fa_required']) has2FA = true;
-    if (svc.is_admin) hasAdmin = true;
-
-    for (const scope of scopes) {
-      if (scope.access === 'Write') writeAccessCount++;
-      if (scope.access === 'Read & Write') readWriteAccessCount++;
-      if (scope.access === 'Read') readOnlyCount++;
-      if (isSensitiveScope(scope.permissions)) criticalScopes++;
-    }
+  for (const scope of scopes) {
+    if (scope.access === 'Write') writeAccessCount++;
+    if (scope.access === 'Read & Write') readWriteAccessCount++;
+    if (scope.access === 'Read') readOnlyCount++;
+    if (isSensitiveScope(scope.permissions)) criticalScopes++;
   }
 
   return {
-    totalServices: services.length,
-    totalScopes,
+    totalScopes: scopes.length,
     writeAccessCount,
     readWriteAccessCount,
     readOnlyCount,
     criticalScopes,
-    has2FA,
-    hasAdmin,
+    has2FA: svc['2fa_required'] ?? false,
+    hasAdmin: svc.is_admin ?? false,
+    isRestricted: svc.is_restricted ?? false,
+    keyType: svc.key_type ?? 'API Key',
   };
 }
 
-// ─── Attack path extraction ──────────────────────────────────────
-export function extractAttackPaths(services: BlastRadiusServiceData[]): AttackPath[] {
+// ─── Attack paths for a SINGLE identity ──────────────────────────
+function extractIdentityAttackPaths(svc: BlastRadiusServiceData): AttackPath[] {
   const paths: AttackPath[] = [];
+  const scopes = svc.scopes ?? [];
+  const riskyScopes = scopes.filter((s) => s.access !== 'Read');
+  const keyLabel = svc.service + ' ' + (svc.key_type ?? 'API Key');
 
-  for (const svc of services) {
-    const scopes = svc.scopes ?? [];
-    // Only include non-read-only scopes as attack paths
-    const riskyScopes = scopes.filter((s) => s.access !== 'Read');
+  for (const scope of riskyScopes) {
+    const label = scope.sub_scope
+      ? scope.scope + ' → ' + scope.sub_scope
+      : scope.scope;
 
-    for (const scope of riskyScopes) {
-      const label = scope.sub_scope
-        ? `${scope.scope} → ${scope.sub_scope}`
-        : scope.scope;
+    let risk: RiskSeverity;
+    if (scope.access === 'Admin') risk = 'Critical';
+    else if (isSensitiveScope(scope.permissions)) risk = 'High';
+    else if (scope.access === 'Write') risk = 'High';
+    else risk = 'Medium';
 
-      let risk: RiskSeverity;
-      if (scope.access === 'Admin') risk = 'Critical';
-      else if (isSensitiveScope(scope.permissions)) risk = 'High';
-      else if (scope.access === 'Write') risk = 'High';
-      else risk = 'Medium';
-
-      paths.push({
-        steps: ['Compromised API Key', svc.service, label],
-        risk,
-        accessLevel: scope.access,
-      });
-    }
+    paths.push({
+      steps: [keyLabel, svc.service, label],
+      risk,
+      accessLevel: scope.access,
+    });
   }
 
-  // Sort by risk (Critical first)
   const riskOrder: Record<RiskSeverity, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
   paths.sort((a, b) => riskOrder[a.risk] - riskOrder[b.risk]);
 
-  return paths.slice(0, 15); // Top 15 most critical
+  return paths.slice(0, 10);
 }
 
-// ─── Node & Edge builders ────────────────────────────────────────
-export function buildNodesAndEdges(
-  services: BlastRadiusServiceData[],
+// ─── Build nodes & edges for a SINGLE identity subgraph ──────────
+function buildIdentitySubgraph(
+  svc: BlastRadiusServiceData,
   riskScore: number,
-  severity: RiskSeverity
-): { nodes: Node[]; edges: Edge[] } {
+  severity: RiskSeverity,
+  offsetX: number,
+): { nodes: Node[]; edges: Edge[]; width: number } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
   const SCOPE_SPACING = 160;
-  const SCOPE_Y = 420;
-  const SERVICE_Y = 180;
-  const SERVICE_GAP = 60; // extra gap between service scope clusters
+  const SCOPE_Y = 440;
+  const SERVICE_Y = 240;
 
-  // ── Phase 1: Collect scope groups per service ──────────────────
-  interface ScopeGroup {
-    svcId: string;
-    service: string;
-    groupName: string;
-    groupScopes: BlastRadiusServiceData['scopes'] & object;
-    highestAccess: AccessLevel;
-    totalPerms: number;
-    subScopeNames: string;
+  const svcId = svc.service.toLowerCase().replace(/\s+/g, '-');
+  const identityId = 'identity-' + svcId;
+
+  // ── Collect scope groups ───────────────────────────────────────
+  const scopes = svc.scopes ?? [];
+  const scopeMap = new Map<string, typeof scopes>();
+  for (const scope of scopes) {
+    if (!scopeMap.has(scope.scope)) scopeMap.set(scope.scope, []);
+    scopeMap.get(scope.scope)!.push(scope);
   }
 
-  const serviceScopeGroups: { svcId: string; svc: BlastRadiusServiceData; groups: ScopeGroup[] }[] = [];
+  const groupEntries = Array.from(scopeMap.entries());
+  const totalGroups = groupEntries.length;
+  const clusterWidth = Math.max(1, totalGroups) * SCOPE_SPACING;
 
-  for (const svc of services) {
-    const svcId = svc.service.toLowerCase().replace(/\s+/g, '-');
-    const scopes = svc.scopes ?? [];
+  // ── Scope nodes ────────────────────────────────────────────────
+  groupEntries.forEach(([groupName, groupScopes], idx) => {
+    const highestAccess = groupScopes.reduce<AccessLevel>((best, s) => {
+      const order: AccessLevel[] = ['Read', 'Write', 'Read & Write', 'Admin'];
+      return order.indexOf(s.access) > order.indexOf(best) ? s.access : best;
+    }, 'Read');
 
-    const scopeMap = new Map<string, typeof scopes>();
-    for (const scope of scopes) {
-      const key = scope.scope;
-      if (!scopeMap.has(key)) scopeMap.set(key, []);
-      scopeMap.get(key)!.push(scope);
-    }
-
-    const groups: ScopeGroup[] = [];
-    for (const [groupName, groupScopes] of scopeMap.entries()) {
-      const highestAccess = groupScopes.reduce<AccessLevel>((best, s) => {
-        const order: AccessLevel[] = ['Read', 'Write', 'Read & Write', 'Admin'];
-        return order.indexOf(s.access) > order.indexOf(best) ? s.access : best;
-      }, 'Read');
-
-      const subScopeNames = groupScopes
-        .map((s) => s.sub_scope)
-        .filter(Boolean)
-        .join(', ');
-
-      const totalPerms = groupScopes.reduce((sum, s) => sum + s.permissions.length, 0);
-
-      groups.push({ svcId, service: svc.service, groupName, groupScopes, highestAccess, totalPerms, subScopeNames });
-    }
-
-    serviceScopeGroups.push({ svcId, svc, groups });
-  }
-
-  // ── Phase 2: Lay out all scope nodes sequentially ──────────────
-  let scopeCursor = 0; // running x index across all scope groups
-
-  const serviceRanges: { svcId: string; svc: BlastRadiusServiceData; startX: number; endX: number }[] = [];
-
-  for (const { svcId, svc, groups } of serviceScopeGroups) {
-    const startIdx = scopeCursor;
-
-    for (const group of groups) {
-      const scopeId = `${svcId}-${group.groupName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-      const x = scopeCursor * SCOPE_SPACING;
-
-      nodes.push({
-        id: scopeId,
-        type: 'scopeNode',
-        position: { x, y: SCOPE_Y },
-        data: {
-          label: group.groupName,
-          access: group.highestAccess,
-          parentService: group.service,
-          subScope: group.subScopeNames || undefined,
-          permissionCount: group.totalPerms,
-        } satisfies ScopeNodeData,
-      });
-
-      edges.push({
-        id: `${svcId}-${scopeId}`,
-        source: svcId,
-        target: scopeId,
-        animated: group.highestAccess !== 'Read',
-        style: {
-          stroke: edgeColor(group.highestAccess),
-          strokeWidth: group.highestAccess === 'Read' ? 1 : 2,
-        },
-      });
-
-      scopeCursor++;
-    }
-
-    const startX = startIdx * SCOPE_SPACING;
-    const endX = (scopeCursor - 1) * SCOPE_SPACING;
-    serviceRanges.push({ svcId, svc, startX, endX });
-
-    // Add gap between service clusters
-    scopeCursor += SERVICE_GAP / SCOPE_SPACING;
-  }
-
-  // ── Phase 3: Center service nodes above their scope ranges ─────
-  for (const { svcId, svc, startX, endX } of serviceRanges) {
-    const svcX = (startX + endX) / 2 - 40; // offset to roughly center the node card
-    const risk = serviceRisk(svc);
+    const scopeId = svcId + '-scope-' + groupName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const totalPerms = groupScopes.reduce((sum, s) => sum + s.permissions.length, 0);
+    const subScopeNames = groupScopes.map((s) => s.sub_scope).filter(Boolean).join(', ');
 
     nodes.push({
-      id: svcId,
-      type: 'serviceNode',
-      position: { x: svcX, y: SERVICE_Y },
+      id: scopeId,
+      type: 'scopeNode',
+      position: { x: offsetX + idx * SCOPE_SPACING, y: SCOPE_Y },
       data: {
-        label: svc.service,
-        service: svc.service,
-        keyType: svc.key_type ?? 'Unknown',
-        scopeCount: (svc.scopes ?? []).length,
-        has2FA: svc['2fa_required'] ?? false,
-        isRestricted: svc.is_restricted ?? false,
-        risk,
-      } satisfies ServiceNodeData,
+        label: groupName,
+        access: highestAccess,
+        parentService: svc.service,
+        subScope: subScopeNames || undefined,
+        permissionCount: totalPerms,
+      } satisfies ScopeNodeData,
     });
 
     edges.push({
-      id: `identity-${svcId}`,
-      source: 'identity',
-      target: svcId,
-      animated: risk === 'Critical' || risk === 'High',
+      id: svcId + '-to-' + scopeId,
+      source: svcId,
+      target: scopeId,
+      animated: highestAccess !== 'Read',
       style: {
-        stroke: risk === 'Critical' ? '#dc2626' : risk === 'High' ? '#ea580c' : '#6b7280',
-        strokeWidth: 2,
+        stroke: edgeColor(highestAccess),
+        strokeWidth: highestAccess === 'Read' ? 1 : 2,
       },
     });
-  }
+  });
 
-  // ── Phase 4: Center identity node above all services ───────────
-  const allSvcXs = serviceRanges.map((r) => (r.startX + r.endX) / 2);
-  const minSvcX = Math.min(...allSvcXs);
-  const maxSvcX = Math.max(...allSvcXs);
-  const rootX = (minSvcX + maxSvcX) / 2 - 60;
+  // ── Service node — centered above scopes ───────────────────────
+  const svcX = offsetX + (clusterWidth - SCOPE_SPACING) / 2 - 50;
 
   nodes.push({
-    id: 'identity',
-    type: 'identityNode',
-    position: { x: rootX, y: 0 },
+    id: svcId,
+    type: 'serviceNode',
+    position: { x: svcX, y: SERVICE_Y },
     data: {
-      label: 'Compromised API Key',
+      label: svc.service,
+      service: svc.service,
+      keyType: svc.key_type ?? 'API Key',
+      scopeCount: scopes.length,
+      has2FA: svc['2fa_required'] ?? false,
+      isRestricted: svc.is_restricted ?? false,
+      risk: severity,
+    } satisfies ServiceNodeData,
+  });
+
+  edges.push({
+    id: identityId + '-to-' + svcId,
+    source: identityId,
+    target: svcId,
+    animated: severity === 'Critical' || severity === 'High',
+    style: {
+      stroke: severity === 'Critical' ? '#dc2626' : severity === 'High' ? '#ea580c' : '#6b7280',
+      strokeWidth: 2,
+    },
+  });
+
+  // ── Identity node — centered above service ─────────────────────
+  const identityX = svcX - 10;
+
+  nodes.push({
+    id: identityId,
+    type: 'identityNode',
+    position: { x: identityX, y: 0 },
+    data: {
+      label: svc.service + ' API Key',
+      service: svc.service,
+      keyType: svc.key_type ?? 'API Key',
       riskScore,
       severity,
+      has2FA: svc['2fa_required'] ?? false,
+      isRestricted: svc.is_restricted ?? false,
     } satisfies IdentityNodeData,
   });
 
-  return { nodes, edges };
+  return { nodes, edges, width: clusterWidth };
 }
 
 // ─── Master transformation ───────────────────────────────────────
 export function transformBlastRadiusData(
   services: BlastRadiusServiceData[]
 ): BlastRadiusOutput {
-  const { score, severity } = calculateRiskScore(services);
-  const summary = buildSummary(services);
-  const attackPaths = extractAttackPaths(services);
-  const { nodes, edges } = buildNodesAndEdges(services, score, severity);
+  const identities: IdentityBlastRadius[] = [];
+  const CLUSTER_GAP = 200;
+
+  let offsetX = 0;
+  const allNodes: Node[] = [];
+  const allEdges: Edge[] = [];
+
+  for (const svc of services) {
+    const { score, severity } = calculateIdentityRisk(svc);
+    const summary = buildIdentitySummary(svc);
+    const attackPaths = extractIdentityAttackPaths(svc);
+    const { nodes, edges, width } = buildIdentitySubgraph(svc, score, severity, offsetX);
+
+    const svcId = svc.service.toLowerCase().replace(/\s+/g, '-');
+
+    identities.push({
+      id: svcId,
+      service: svc.service,
+      nodes,
+      edges,
+      riskScore: score,
+      severity,
+      summary,
+      attackPaths,
+    });
+
+    allNodes.push(...nodes);
+    allEdges.push(...edges);
+
+    offsetX += width + CLUSTER_GAP;
+  }
 
   return {
-    nodes,
-    edges,
-    riskScore: score,
-    severity,
-    summary,
-    attackPaths,
+    identities,
+    nodes: allNodes,
+    edges: allEdges,
   };
 }

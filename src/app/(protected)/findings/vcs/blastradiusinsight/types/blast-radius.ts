@@ -79,8 +79,7 @@ export interface BlastRadiusServiceData {
 
 export type RiskSeverity = 'Low' | 'Medium' | 'High' | 'Critical';
 
-export interface BlastRadiusSummary {
-  totalServices: number;
+export interface IdentitySummary {
   totalScopes: number;
   writeAccessCount: number;
   readWriteAccessCount: number;
@@ -88,6 +87,8 @@ export interface BlastRadiusSummary {
   criticalScopes: number;
   has2FA: boolean;
   hasAdmin: boolean;
+  isRestricted: boolean;
+  keyType: string;
 }
 
 export interface AttackPath {
@@ -96,11 +97,37 @@ export interface AttackPath {
   accessLevel: AccessLevel;
 }
 
-// Node data types
-export interface IdentityNodeData {
-  label: string;
+// ─── Per-identity blast radius ───────────────────────────────────
+
+export interface IdentityBlastRadius {
+  id: string;
+  service: string;
+  nodes: Node[];
+  edges: Edge[];
   riskScore: number;
   severity: RiskSeverity;
+  summary: IdentitySummary;
+  attackPaths: AttackPath[];
+}
+
+// ─── Combined output ─────────────────────────────────────────────
+
+export interface BlastRadiusOutput {
+  identities: IdentityBlastRadius[];
+  nodes: Node[];   // flattened from all identities
+  edges: Edge[];   // flattened from all identities
+}
+
+// ─── Node data types ─────────────────────────────────────────────
+
+export interface IdentityNodeData {
+  label: string;
+  service: string;
+  keyType: string;
+  riskScore: number;
+  severity: RiskSeverity;
+  has2FA: boolean;
+  isRestricted: boolean;
   [key: string]: unknown;
 }
 
@@ -125,12 +152,3 @@ export interface ScopeNodeData {
 }
 
 export type BlastRadiusNodeData = IdentityNodeData | ServiceNodeData | ScopeNodeData;
-
-export interface BlastRadiusOutput {
-  nodes: Node[];
-  edges: Edge[];
-  riskScore: number;
-  severity: RiskSeverity;
-  summary: BlastRadiusSummary;
-  attackPaths: AttackPath[];
-}

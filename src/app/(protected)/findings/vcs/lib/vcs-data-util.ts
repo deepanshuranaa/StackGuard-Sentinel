@@ -41,15 +41,31 @@ const statusActions = ['auto_fixed', 'ticket_created', 'rotated', 'moved_to_vaul
 
 const repos = ['backend-api', 'frontend', 'infrastructure', 'mobile-app', 'auth-service', 'data-pipeline'];
 
+// Seeded PRNG (mulberry32) — ensures identical output on server and client
+function createSeededRandom(seed: number) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+let seededRandom = createSeededRandom(42);
+
 function pick<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(seededRandom() * arr.length)];
 }
 
 function pickMultiple<T>(arr: readonly T[], min: number, max: number): T[] {
-  const count = min + Math.floor(Math.random() * (max - min + 1));
-  const shuffled = [...arr].sort(() => 0.5 - Math.random());
+  const count = min + Math.floor(seededRandom() * (max - min + 1));
+  const shuffled = [...arr].sort(() => 0.5 - seededRandom());
   return shuffled.slice(0, count);
 }
+
+// Fixed reference date to avoid Date.now() SSR/client mismatch
+const REFERENCE_DATE = new Date('2026-04-04T00:00:00Z').getTime();
 
 function generateFinding(index: number): VcsSecretFinding {
   const severity = index < 2 ? 'critical' : index < 16 ? 'high' : pick(severities);
@@ -58,10 +74,10 @@ function generateFinding(index: number): VcsSecretFinding {
 
   // Critical → more occurrences, higher blast radius, more statuses
   const occurrences = isCritical
-    ? 3 + Math.floor(Math.random() * 15)
+    ? 3 + Math.floor(seededRandom() * 15)
     : isHigh
-      ? 2 + Math.floor(Math.random() * 8)
-      : 1 + Math.floor(Math.random() * 4);
+      ? 2 + Math.floor(seededRandom() * 8)
+      : 1 + Math.floor(seededRandom() * 4);
 
   const blastRadius: VcsSecretFinding['blastRadius'] = isCritical
     ? 'high'
@@ -76,10 +92,10 @@ function generateFinding(index: number): VcsSecretFinding {
       : pickMultiple(statusActions, 0, 2);
 
   const detectorKey = pick(detectorKeys);
-  const daysAgo = Math.floor(Math.random() * 90);
-  const createdAt = new Date(Date.now() - daysAgo * 86400000).toISOString();
-  const lastDetectedDaysAgo = Math.floor(Math.random() * daysAgo);
-  const lastDetected = new Date(Date.now() - lastDetectedDaysAgo * 86400000).toISOString();
+  const daysAgo = Math.floor(seededRandom() * 90);
+  const createdAt = new Date(REFERENCE_DATE - daysAgo * 86400000).toISOString();
+  const lastDetectedDaysAgo = Math.floor(seededRandom() * daysAgo);
+  const lastDetected = new Date(REFERENCE_DATE - lastDetectedDaysAgo * 86400000).toISOString();
 
   return {
     id: `finding-${String(index + 1).padStart(3, '0')}`,
@@ -87,7 +103,7 @@ function generateFinding(index: number): VcsSecretFinding {
     detectorType: detectorKey,
     gitProvider: pick(gitProviders),
     status: actions.length > 0 ? actions[actions.length - 1] as VcsSecretFinding['status'] : 'pending',
-    secret: `sk_live_${'x'.repeat(8 + Math.floor(Math.random() * 16))}`,
+    secret: `sk_live_${'x'.repeat(8 + Math.floor(seededRandom() * 16))}`,
     secretMask: '••••••••••',
     occurrences,
     blastRadius,
@@ -96,7 +112,7 @@ function generateFinding(index: number): VcsSecretFinding {
     branch: pick(['main', 'develop', 'staging', 'feature/auth', 'release/v2']),
     createdAt,
     lastDetected,
-    owner: Math.random() > 0.4 ? pick(['alice', 'bob', 'charlie', 'diana', 'eve']) : undefined,
+    owner: seededRandom() > 0.4 ? pick(['alice', 'bob', 'charlie', 'diana', 'eve']) : undefined,
     isValid: isCritical ? 'active' : pick(validities),
     actions: actions as string[],
   };
@@ -106,6 +122,8 @@ let _cachedFindings: VcsSecretFinding[] | null = null;
 
 export function generateMockFindings(count: number = 178): VcsSecretFinding[] {
   if (_cachedFindings && _cachedFindings.length === count) return _cachedFindings;
+  // Reset seed so server and client produce identical data
+  seededRandom = createSeededRandom(42);
   _cachedFindings = Array.from({ length: count }, (_, i) => generateFinding(i));
   return _cachedFindings;
 }

@@ -34,6 +34,7 @@ function IdentityNodeComponent({ data }: NodeProps) {
           <KeyRound className="h-6 w-6 text-white" />
         </div>
         <span className="text-sm font-bold text-white">{d.label}</span>
+        <span className="text-[10px] text-slate-400">{d.keyType}</span>
         <div className="flex items-center gap-2">
           <span className="text-2xl font-black text-white">{d.riskScore}</span>
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white uppercase tracking-wider">
