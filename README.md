@@ -74,6 +74,72 @@ StackGuard-Sentinel is built with a **security-first, insight-driven UX** approa
 
 ---
 
+## Blast Radius Visualization — Design Rationale
+
+The Blast Radius feature is the analytical core of StackGuard-Sentinel. Its purpose is to answer a deceptively simple question: **"If this identity is compromised, what is the extent of damage?"**
+
+Answering this requires modeling a chain of relationships:
+
+```
+Identity → Service → Permissions → Scopes → Further Access → Impact
+```
+
+This is fundamentally a **graph problem**, not a tabular one. Below is the reasoning behind the chosen visualization approach.
+
+### Why Not Tables or Metric Cards?
+
+The raw data from an NHI scan is dense — a single SendGrid Full Access Key, for example, yields 42 scopes, 206 raw permissions, and multiple access levels. Presenting this as a flat table or a list of numbers creates several problems:
+
+- **Cognitive overload** — Users are confronted with rows of permission strings and access levels with no sense of hierarchy, relationship, or relative severity.
+- **Loss of structure** — A table treats every row equally. It cannot convey that `Mail Send (Write)` and `Stats (Read)` belong to the same service but carry fundamentally different risk profiles.
+- **No propagation visibility** — Blast radius is inherently about how access flows from an identity through a service to its scopes. Tables flatten this chain, making it impossible to trace how a compromised key reaches a sensitive endpoint.
+
+### Why an Interactive Node Graph?
+
+Blast radius maps naturally to a directed acyclic graph (DAG):
+
+- **Identity nodes** represent the compromised credential (e.g., "SendGrid API Key", "OpenAI Service Account API Key")
+- **Service nodes** represent the service that credential unlocks, annotated with key type, scope count, and security flags (2FA, restricted access)
+- **Scope nodes** represent what the attacker can actually do — grouped by category, color-coded by access level (Read / Write / Read & Write / Admin)
+- **Edges** encode the access relationship, with color and animation signaling risk severity
+
+This structure enables users to **visually trace** the path from a leaked key to every resource it can reach, without requiring them to parse raw permission data.
+
+### Independent Subgraphs per Identity
+
+A critical design decision: each identity is rendered as its own **independent subgraph** within a shared canvas. There is no shared root node. This is because:
+
+- Each credential is a separate, independently compromised entity
+- Permissions granted by one key have no relationship to another unless explicitly defined
+- A shared root (e.g., "Compromised API Key → SendGrid + Postman + OpenAI") would incorrectly imply shared access or a single point of compromise
+
+The subgraphs are laid out horizontally, visually separated, each with its own risk score and severity — making it immediately clear that these are **distinct blast radii**.
+
+### Visual Encoding
+
+The graph uses deliberate visual cues to convey risk without requiring the user to read every label:
+
+| Element | Encoding | Meaning |
+|---------|----------|---------|
+| **Edge color** | Red / Orange / Yellow | Write or Admin / Read & Write / Read-only |
+| **Edge animation** | Dashed + animated | Non-read access = active risk path |
+| **Identity ring** | Severity-colored ring | Overall risk severity of that identity |
+| **Scope dot** | Color-coded circle | Access level at a glance |
+| **Service border** | Severity-colored border | Per-service risk level |
+
+### UX Outcome
+
+When a user opens the Blast Radius page, they should be able to answer these questions **within seconds**:
+
+1. How many independent identities are compromised?
+2. Which identity carries the highest risk?
+3. Which scopes grant write or admin access?
+4. How far does each identity's access reach?
+
+The graph achieves this through spatial layout, color hierarchy, and progressive detail — from the high-level identity card down to individual scope nodes. Numbers and summaries are provided alongside the graph in dedicated cards, but the graph remains the primary decision-making interface.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
