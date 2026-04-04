@@ -8,26 +8,25 @@ import {
   getSyncTimestamp,
   setSyncTimestamp,
 } from '@/app/(protected)/dashboard/lib/dashboard-util';
-import type { VcsActiveFilters, VcsSortBy, SortOrder } from '../../types/findings';
+import type { VcsActiveFilters, VcsSortBy } from '../../types/findings';
 import { VcsHeaderView } from '../views/vcs-header-view';
 
 type VcsHeaderContainerProps = {
   totalFindings: number;
+  activeFilters: VcsActiveFilters;
+  onFilterChange: (category: string, optionId: string) => void;
+  onClearFilters: () => void;
 };
 
-function getDefaultFilters(): VcsActiveFilters {
-  const filters = {} as VcsActiveFilters;
-  for (const group of vcsFilterConfig) {
-    filters[group.category] = group.defaultSelected ?? [];
-  }
-  return filters;
-}
-
-export function VcsHeaderContainer({ totalFindings }: VcsHeaderContainerProps) {
+export function VcsHeaderContainer({
+  totalFindings,
+  activeFilters,
+  onFilterChange,
+  onClearFilters,
+}: VcsHeaderContainerProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [lastScanLabel, setLastScanLabel] = useState('Never scanned');
-  const [activeFilters, setActiveFilters] = useState<VcsActiveFilters>(getDefaultFilters);
   const [sortBy, setSortBy] = useState<VcsSortBy>('severity');
 
   // Restore last sync timestamp on mount
@@ -63,28 +62,6 @@ export function VcsHeaderContainer({ totalFindings }: VcsHeaderContainerProps) {
     }, 3000);
   }, []);
 
-  const handleFilterChange = useCallback(
-    (category: string, optionId: string) => {
-      setActiveFilters((prev) => {
-        const key = category as keyof VcsActiveFilters;
-        const current = prev[key] ?? [];
-        const next = current.includes(optionId)
-          ? current.filter((id) => id !== optionId)
-          : [...current, optionId];
-        return { ...prev, [key]: next };
-      });
-    },
-    []
-  );
-
-  const handleClearFilters = useCallback(() => {
-    const cleared = {} as VcsActiveFilters;
-    for (const group of vcsFilterConfig) {
-      cleared[group.category] = [];
-    }
-    setActiveFilters(cleared);
-  }, []);
-
   const handleSortChange = useCallback((newSort: string) => {
     setSortBy(newSort as VcsSortBy);
   }, []);
@@ -99,8 +76,8 @@ export function VcsHeaderContainer({ totalFindings }: VcsHeaderContainerProps) {
       onSortChange={handleSortChange}
       filterGroups={vcsFilterConfig}
       activeFilters={activeFilters}
-      onFilterChange={handleFilterChange}
-      onClearFilters={handleClearFilters}
+      onFilterChange={onFilterChange}
+      onClearFilters={onClearFilters}
     />
   );
 }
