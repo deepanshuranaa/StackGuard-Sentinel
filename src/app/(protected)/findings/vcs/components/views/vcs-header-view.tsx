@@ -44,8 +44,7 @@ export function VcsHeaderView({
       <div className="min-w-0">
         <h2 className="text-xl font-normal tracking-wide">Findings for VCS</h2>
         <p className="text-sm text-muted-foreground">
-          {totalFindings} findings  
-          {/* {lastScanLabel} */}
+          {lastScanLabel} • {totalFindings} findings  
         </p>
       </div>
 
