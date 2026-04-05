@@ -1,27 +1,5 @@
 const SYNC_STORAGE_KEY = 'sg_last_sync';
 
-// --- Seeded PRNG (mulberry32) for hydration-safe deterministic data ---
-const REFERENCE_DATE = new Date('2026-04-04T00:00:00Z');
-
-function createSeededRandom(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return hash;
-}
-// --- End seeded PRNG ---
-
 export function formatTimeAgo(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;
@@ -55,18 +33,18 @@ export interface RiskTrendDataPoint {
 }
 
 export function getChartDataByPeriod(period: string): RiskTrendDataPoint[] {
-  const seededRandom = createSeededRandom(42 + hashString(`chart-${period}`));
+  const rand = createSeededRandom(hashString(`chart-${period}`));
 
   const generateData = (days: number): RiskTrendDataPoint[] => {
     const data: RiskTrendDataPoint[] = [];
-    const ref = new Date(REFERENCE_DATE);
+    const now = new Date('2026-04-05T00:00:00');
     for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(ref);
+      const date = new Date(now);
       date.setDate(date.getDate() - i);
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const day = date.getDate().toString().padStart(2, '0');
       const dateStr = `${month}/${day}`;
-      const baseRisk = 20 + Math.sin(i * 0.5) * 25 + seededRandom() * 15;
+      const baseRisk = 20 + Math.sin(i * 0.5) * 25 + rand() * 15;
       data.push({
         date: dateStr,
         risk: Math.min(100, Math.max(0, Math.round(baseRisk))),
@@ -77,14 +55,14 @@ export function getChartDataByPeriod(period: string): RiskTrendDataPoint[] {
 
   const generateMonthData = (months: number): RiskTrendDataPoint[] => {
     const data: RiskTrendDataPoint[] = [];
-    const ref = new Date(REFERENCE_DATE);
+    const now = new Date('2026-04-05T00:00:00');
     for (let i = months - 1; i >= 0; i--) {
-      const date = new Date(ref);
+      const date = new Date(now);
       date.setMonth(date.getMonth() - i);
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const day = date.getDate().toString().padStart(2, '0');
       const dateStr = `${month}/${day}`;
-      const baseRisk = 25 + Math.sin(i * 0.3) * 28 + seededRandom() * 12;
+      const baseRisk = 25 + Math.sin(i * 0.3) * 28 + rand() * 12;
       data.push({
         date: dateStr,
         risk: Math.min(100, Math.max(0, Math.round(baseRisk))),
@@ -108,6 +86,23 @@ export function getChartDataByPeriod(period: string): RiskTrendDataPoint[] {
 }
 
 import type { InsightsTabData, InsightsTab, SourceMetric, SourceBreakdown } from '../types/insights';
+
+// Deterministic seeded PRNG to avoid SSR/client hydration mismatches
+function createSeededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function hashString(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 33) ^ str.charCodeAt(i);
+  }
+  return Math.abs(hash);
+}
 
 const sourceNames: Record<InsightsTab, string[]> = {
   'vcs': ['Slack', 'GitHub', 'PostgreSQL', 'Anthropic', 'GitLab', 'OpenAI', 'HashiCorp Vault', 'Microsoft Azure', 'Hugging Face', 'Gradio'],
@@ -168,15 +163,15 @@ const breakdownSources: Record<InsightsTab, Record<string, string[]>> = {
 };
 
 export function getInsightsDataByTab(tab: InsightsTab): InsightsTabData {
-  const seededRandom = createSeededRandom(42 + hashString(`insights-${tab}`));
+  const rand = createSeededRandom(hashString(`insights-${tab}`));
   const sources = sourceNames[tab];
   const selectedSource = sources[0]; // Default to first source
 
   // Generate top 10 sources with varying critical/risky counts
   const metrics: SourceMetric[] = sources.slice(0, 10).map((source, idx) => {
-    const baseTotal = Math.floor(seededRandom() * 8) + 2;
-    const critical = Math.floor(baseTotal * (0.6 + seededRandom() * 0.3));
-    const risky = Math.max(0, baseTotal - critical - Math.floor(seededRandom() * 2));
+    const baseTotal = Math.floor(rand() * 8) + 2;
+    const critical = Math.floor(baseTotal * (0.6 + rand() * 0.3));
+    const risky = Math.max(0, baseTotal - critical - Math.floor(rand() * 2));
     return {
       name: source,
       critical,
@@ -189,7 +184,7 @@ export function getInsightsDataByTab(tab: InsightsTab): InsightsTabData {
   const breakdownNames = breakdownSources[tab][selectedSource] || ['Sub1', 'Sub2'];
   const breakdown: SourceBreakdown[] = breakdownNames.map((name) => ({
     name,
-    count: Math.floor(seededRandom() * 5) + 1,
+    count: Math.floor(rand() * 5) + 1,
   }));
 
   const selectedMetric = metrics[0];
